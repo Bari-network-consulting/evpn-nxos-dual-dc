@@ -1,0 +1,30 @@
+[spines]
+A-SPINE-01 ansible_host=192.168.1.31
+A-SPINE-02 ansible_host=192.168.1.32
+
+[leaf_pair1]
+A-LEAF-01 ansible_host=192.168.1.41
+A-LEAF-02 ansible_host=192.168.1.42
+
+[leaf_pair2]
+A-LEAF-03 ansible_host=192.168.1.43
+A-LEAF-04 ansible_host=192.168.1.44
+
+[border_leafs]
+A-LEAF-05 ansible_host=192.168.1.45
+
+[leafs:children]
+leaf_pair1
+leaf_pair2
+border_leafs
+
+[dc2_fabric:children]
+spines
+leafs
+
+[dc2_fabric:vars]
+ansible_network_os=cisco.nxos.nxos
+ansible_connection=network_cli
+ansible_user=admin
+ansible_password=admin123
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o KexAlgorithms=+diffie-hellman-group14-sha1'

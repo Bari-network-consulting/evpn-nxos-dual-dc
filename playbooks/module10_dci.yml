@@ -1,0 +1,374 @@
+---
+- name: DC1 - Module 10 DCI Interconnect
+  hosts: dc1_border
+  gather_facts: false
+
+  tasks:
+    - name: N-LEAF-05 - Configure DCI P2P interface Ethernet1/6
+      cisco.nxos.nxos_config:
+        lines:
+          - description DCI to A-LEAF-05
+          - no switchport
+          - ip address 10.255.0.0/31
+          - mtu 9216
+          - no shutdown
+        parents: interface Ethernet1/6
+
+    - name: N-LEAF-05 - Add DCI eBGP neighbor description
+      cisco.nxos.nxos_config:
+        lines:
+          - description DCI-A-LEAF-05
+          - remote-as 65200
+          - ebgp-multihop 2
+        parents:
+          - router bgp 65000
+          - neighbor 10.255.0.1
+
+    - name: N-LEAF-05 - Add DCI eBGP L2VPN EVPN address family
+      cisco.nxos.nxos_config:
+        lines:
+          - send-community extended
+          - rewrite-evpn-rt-asn
+        parents:
+          - router bgp 65000
+          - neighbor 10.255.0.1
+          - address-family l2vpn evpn
+
+    - name: N-LEAF-05 - Add DCI eBGP neighbor in VRF TENANT-A
+      cisco.nxos.nxos_config:
+        lines:
+          - remote-as 65200
+          - description DCI-A-LEAF-05-TENANT-A
+        parents:
+          - router bgp 65000
+          - vrf TENANT-A
+          - neighbor 10.255.0.1
+
+    - name: N-LEAF-05 - Add DCI eBGP IPv4 unicast in VRF TENANT-A
+      cisco.nxos.nxos_config:
+        lines:
+          - send-community extended
+        parents:
+          - router bgp 65000
+          - vrf TENANT-A
+          - neighbor 10.255.0.1
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Add DCI eBGP neighbor in VRF TENANT-B
+      cisco.nxos.nxos_config:
+        lines:
+          - remote-as 65200
+          - description DCI-A-LEAF-05-TENANT-B
+        parents:
+          - router bgp 65000
+          - vrf TENANT-B
+          - neighbor 10.255.0.1
+
+    - name: N-LEAF-05 - Add DCI eBGP IPv4 unicast in VRF TENANT-B
+      cisco.nxos.nxos_config:
+        lines:
+          - send-community extended
+        parents:
+          - router bgp 65000
+          - vrf TENANT-B
+          - neighbor 10.255.0.1
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Import DC2 L2VNI RT for VNI 10010
+      cisco.nxos.nxos_config:
+        lines:
+          - route-target import 10010:10010
+        parents:
+          - evpn
+          - vni 10010 l2
+
+    - name: N-LEAF-05 - Import DC2 L2VNI RT for VNI 10020
+      cisco.nxos.nxos_config:
+        lines:
+          - route-target import 10020:10020
+        parents:
+          - evpn
+          - vni 10020 l2
+
+    - name: N-LEAF-05 - Import DC2 L3VNI RT for TENANT-A
+      cisco.nxos.nxos_config:
+        lines:
+          - route-target import 50001:50001
+
+        parents:
+          - vrf context TENANT-A
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Import DC2 L3VNI RT for TENANT-B
+      cisco.nxos.nxos_config:
+        lines:
+          - route-target import 50002:50002
+
+        parents:
+          - vrf context TENANT-B
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+- name: DC1 - Module 10 Verify DCI
+  hosts: dc1_border
+  gather_facts: false
+
+  tasks:
+    - name: N-LEAF-05 - Check DCI interface
+      cisco.nxos.nxos_command:
+        commands:
+          - "show interface Ethernet1/6 brief"
+      register: dci_intf
+
+    - name: N-LEAF-05 - Check BGP summary
+      cisco.nxos.nxos_command:
+        commands:
+          - "show bgp l2vpn evpn summary"
+      register: dci_bgp
+
+    - name: N-LEAF-05 - Check VRF TENANT-A routes
+      cisco.nxos.nxos_command:
+        commands:
+          - "show ip route vrf TENANT-A"
+      register: vrf_a_routes
+
+    - name: N-LEAF-05 - Check VRF TENANT-B routes
+      cisco.nxos.nxos_command:
+        commands:
+          - "show ip route vrf TENANT-B"
+      register: vrf_b_routes
+
+    - name: N-LEAF-05 - DCI interface status
+      debug:
+        msg: "{{ dci_intf.stdout[0] }}"
+
+    - name: N-LEAF-05 - BGP summary
+      debug:
+        msg: "{{ dci_bgp.stdout[0] }}"
+
+    - name: N-LEAF-05 - VRF TENANT-A routing table
+      debug:
+        msg: "{{ vrf_a_routes.stdout[0] }}"
+
+    - name: N-LEAF-05 - VRF TENANT-B routing table
+      debug:
+        msg: "{{ vrf_b_routes.stdout[0] }}"
+
+- name: DC1 - Module 10 DCI Sub-interfaces per VRF
+  hosts: dc1_border
+  gather_facts: false
+
+  tasks:
+    - name: N-LEAF-05 - Configure DCI sub-interface for TENANT-A
+      cisco.nxos.nxos_config:
+        lines:
+          - description DCI TENANT-A to A-LEAF-05
+          - encapsulation dot1q 10
+          - vrf member TENANT-A
+          - ip address 10.255.10.0/31
+          - no shutdown
+        parents: interface Ethernet1/6.10
+
+    - name: N-LEAF-05 - Configure DCI sub-interface for TENANT-B
+      cisco.nxos.nxos_config:
+        lines:
+          - description DCI TENANT-B to A-LEAF-05
+          - encapsulation dot1q 20
+          - vrf member TENANT-B
+          - ip address 10.255.20.0/31
+          - no shutdown
+        parents: interface Ethernet1/6.20
+
+    - name: N-LEAF-05 - Remove old static routes
+      cisco.nxos.nxos_config:
+        lines:
+          - no ip route 10.30.10.0/24 10.255.0.1 vrf default
+        parents:
+          - vrf context TENANT-A
+
+    - name: N-LEAF-05 - Remove old TENANT-B static route
+      cisco.nxos.nxos_config:
+        lines:
+          - no ip route 10.40.20.0/24 10.255.0.1 vrf default
+        parents:
+          - vrf context TENANT-B
+
+    - name: N-LEAF-05 - Add new static routes via sub-interfaces
+      cisco.nxos.nxos_config:
+        lines:
+          - ip route 10.30.10.0/24 10.255.10.1
+        parents:
+          - vrf context TENANT-A
+
+    - name: N-LEAF-05 - Add TENANT-B static route via sub-interface
+      cisco.nxos.nxos_config:
+        lines:
+          - ip route 10.40.20.0/24 10.255.20.1
+        parents:
+          - vrf context TENANT-B
+
+    - name: N-LEAF-05 - Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+- name: DC1 - Module 10 Advertise DC2 routes via BGP
+  hosts: dc1_border
+  gather_facts: false
+
+  tasks:
+    - name: N-LEAF-05 - Advertise DC2 TENANT-A subnet via BGP
+      cisco.nxos.nxos_config:
+        lines:
+          - network 10.30.10.0/24
+        parents:
+          - router bgp 65000
+          - vrf TENANT-A
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Advertise DC2 TENANT-B subnet via BGP
+      cisco.nxos.nxos_config:
+        lines:
+          - network 10.40.20.0/24
+        parents:
+          - router bgp 65000
+          - vrf TENANT-B
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+    - name: N-LEAF-05 - Check N-LEAF-01 gets DC2 routes
+      cisco.nxos.nxos_command:
+        commands:
+          - "show ip route vrf TENANT-A"
+      register: vrf_routes
+
+    - name: N-LEAF-05 - VRF TENANT-A routes
+      debug:
+        msg: "{{ vrf_routes.stdout[0] }}"
+
+- name: DC1 - Module 10 Fix RT import on all leaves
+  hosts: dc1_leaves
+  gather_facts: false
+
+  tasks:
+    - name: "{{ hostname }} - Import DC2 L3VNI RT for TENANT-A"
+      cisco.nxos.nxos_config:
+        lines:
+          - route-target import 50001:50001
+        parents:
+          - vrf context TENANT-A
+          - address-family ipv4 unicast
+
+    - name: "{{ hostname }} - Import DC2 L3VNI RT for TENANT-B"
+      cisco.nxos.nxos_config:
+        lines:
+          - route-target import 50002:50002
+        parents:
+          - vrf context TENANT-B
+          - address-family ipv4 unicast
+
+    - name: "{{ hostname }} - Save configuration"
+      cisco.nxos.nxos_config:
+        save_when: always
+
+- name: DC1 - Module 10 Fix BGP advertisement method
+  hosts: dc1_border
+  gather_facts: false
+
+  tasks:
+    - name: N-LEAF-05 - Remove network statements
+      cisco.nxos.nxos_config:
+        lines:
+          - no network 10.30.10.0/24
+          - no network 10.40.20.0/24
+        parents:
+          - router bgp 65000
+          - vrf TENANT-A
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Remove TENANT-B network statement
+      cisco.nxos.nxos_config:
+        lines:
+          - no network 10.40.20.0/24
+        parents:
+          - router bgp 65000
+          - vrf TENANT-B
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Verify BGP VRF TENANT-A table
+      cisco.nxos.nxos_command:
+        commands:
+          - "show ip bgp vrf TENANT-A"
+      register: bgp_vrf
+
+    - name: N-LEAF-05 - BGP VRF TENANT-A
+      debug:
+        msg: "{{ bgp_vrf.stdout[0] }}"
+
+    - name: N-LEAF-05 - Check EVPN Type-5 for DC2 subnet
+      cisco.nxos.nxos_command:
+        commands:
+          - "show bgp l2vpn evpn 10.30.10.0"
+      register: evpn_type5
+
+    - name: N-LEAF-05 - EVPN Type-5 status
+      debug:
+        msg: "{{ evpn_type5.stdout[0] }}"
+
+- name: DC1 - Module 10 Fix redistribute static on border leaf
+  hosts: dc1_border
+  gather_facts: false
+
+  tasks:
+    - name: N-LEAF-05 - Remove duplicate static routes TENANT-A
+      cisco.nxos.nxos_config:
+        lines:
+          - no ip route 10.30.10.0/24 10.255.0.1
+          - no ip route 10.30.10.0/24 Null0 254
+        parents:
+          - vrf context TENANT-A
+
+    - name: N-LEAF-05 - Remove duplicate static routes TENANT-B
+      cisco.nxos.nxos_config:
+        lines:
+          - no ip route 10.40.20.0/24 10.255.0.1
+          - no ip route 10.40.20.0/24 Null0 254
+        parents:
+          - vrf context TENANT-B
+
+    - name: N-LEAF-05 - Add redistribute static to BGP VRF TENANT-A
+      cisco.nxos.nxos_config:
+        lines:
+          - redistribute static route-map PERMIT-ALL
+        parents:
+          - router bgp 65000
+          - vrf TENANT-A
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Add redistribute static to BGP VRF TENANT-B
+      cisco.nxos.nxos_config:
+        lines:
+          - redistribute static route-map PERMIT-ALL
+        parents:
+          - router bgp 65000
+          - vrf TENANT-B
+          - address-family ipv4 unicast
+
+    - name: N-LEAF-05 - Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+    - name: N-LEAF-05 - Check BGP VRF TENANT-A
+      cisco.nxos.nxos_command:
+        commands:
+          - "show ip bgp vrf TENANT-A"
+      register: bgp_vrf
+
+    - name: N-LEAF-05 - BGP VRF TENANT-A table
+      debug:
+        msg: "{{ bgp_vrf.stdout[0] }}"
