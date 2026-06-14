@@ -1,0 +1,277 @@
+---
+# ================================================================
+# Module 00 - Wipe DC2 Configuration
+# Identical to DC1 wipe but targets DC2 devices
+# BGP AS 65001
+# ================================================================
+
+- name: "Module 00 - Wipe DC2 Spines"
+  hosts: spines
+  gather_facts: no
+  connection: network_cli
+
+  tasks:
+    - name: Remove OSPF process
+      cisco.nxos.nxos_config:
+        lines:
+          - no router ospf 1
+      ignore_errors: yes
+
+    - name: Remove BGP process
+      cisco.nxos.nxos_config:
+        lines:
+          - no router bgp 65001
+      ignore_errors: yes
+
+    - name: Remove loopback interfaces
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface loopback0
+          - no interface loopback1
+      ignore_errors: yes
+
+    - name: Reset Ethernet uplinks to default
+      cisco.nxos.nxos_config:
+        lines:
+          - default interface Ethernet1/1
+          - default interface Ethernet1/2
+          - default interface Ethernet1/3
+          - default interface Ethernet1/4
+          - default interface Ethernet1/5
+      ignore_errors: yes
+
+    - name: Remove features
+      cisco.nxos.nxos_config:
+        lines:
+          - no feature ospf
+          - no feature bgp
+          - no feature nv overlay
+          - no feature vn-segment-vlan-based
+      ignore_errors: yes
+
+    - name: Save clean configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+    - name: Verify management reachable
+      cisco.nxos.nxos_command:
+        commands:
+          - show interface mgmt0 brief
+      register: mgmt
+
+    - name: Print result
+      debug:
+        msg: "{{ inventory_hostname }} mgmt0: {{ mgmt.stdout[0] }}"
+
+
+- name: "Module 00 - Wipe DC2 Server Leafs"
+  hosts: leaf_pair1,leaf_pair2
+  gather_facts: no
+  connection: network_cli
+
+  tasks:
+    - name: Remove vPC domains
+      cisco.nxos.nxos_config:
+        lines:
+          - "no vpc domain 10"
+          - "no vpc domain 20"
+      ignore_errors: yes
+
+    - name: Remove Port-Channels
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface port-channel10
+          - no interface port-channel11
+          - no interface port-channel12
+      ignore_errors: yes
+
+    - name: Remove NVE interface
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface nve1
+      ignore_errors: yes
+
+    - name: Remove VRFs
+      cisco.nxos.nxos_config:
+        lines:
+          - no vrf context TENANT-A
+          - no vrf context TENANT-B
+      ignore_errors: yes
+
+    - name: Remove VLANs
+      cisco.nxos.nxos_config:
+        lines:
+          - no vlan 10
+          - no vlan 20
+          - no vlan 3966
+          - no vlan 3967
+      ignore_errors: yes
+
+    - name: Remove EVPN config
+      cisco.nxos.nxos_config:
+        lines:
+          - no evpn
+      ignore_errors: yes
+
+    - name: Remove OSPF process
+      cisco.nxos.nxos_config:
+        lines:
+          - no router ospf 1
+      ignore_errors: yes
+
+    - name: Remove BGP process
+      cisco.nxos.nxos_config:
+        lines:
+          - no router bgp 65001
+      ignore_errors: yes
+
+    - name: Remove loopback interfaces
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface loopback0
+          - no interface loopback1
+      ignore_errors: yes
+
+    - name: Remove SVIs
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface vlan10
+          - no interface vlan20
+          - no interface vlan3966
+          - no interface vlan3967
+      ignore_errors: yes
+
+    - name: Reset Ethernet interfaces to default
+      cisco.nxos.nxos_config:
+        lines:
+          - default interface Ethernet1/1
+          - default interface Ethernet1/2
+          - default interface Ethernet1/3
+          - default interface Ethernet1/4
+          - default interface Ethernet1/5
+          - default interface Ethernet1/6
+          - default interface Ethernet1/8
+      ignore_errors: yes
+
+    - name: Remove prefix-lists and route-maps
+      cisco.nxos.nxos_config:
+        lines:
+          - no ip prefix-list ALL
+          - no route-map PERMIT-ALL
+      ignore_errors: yes
+
+    - name: Remove anycast gateway MAC
+      cisco.nxos.nxos_config:
+        lines:
+          - no fabric forwarding anycast-gateway-mac 0020.0000.1234
+      ignore_errors: yes
+
+    - name: Remove features
+      cisco.nxos.nxos_config:
+        lines:
+          - no feature ospf
+          - no feature bgp
+          - no feature nv overlay
+          - no feature vn-segment-vlan-based
+          - no feature interface-vlan
+          - no feature vpc
+      ignore_errors: yes
+
+    - name: Save clean configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+    - name: Verify management reachable
+      cisco.nxos.nxos_command:
+        commands:
+          - show interface mgmt0 brief
+      register: mgmt
+
+    - name: Print result
+      debug:
+        msg: "{{ inventory_hostname }} mgmt0: {{ mgmt.stdout[0] }}"
+
+
+- name: "Module 00 - Wipe DC2 Border Leaf (A-LEAF-05)"
+  hosts: border_leafs
+  gather_facts: no
+  connection: network_cli
+
+  tasks:
+    - name: Remove Port-Channel DCI
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface port-channel10
+      ignore_errors: yes
+
+    - name: Remove NVE interface
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface nve1
+      ignore_errors: yes
+
+    - name: Remove VRFs
+      cisco.nxos.nxos_config:
+        lines:
+          - no vrf context TENANT-A
+          - no vrf context TENANT-B
+      ignore_errors: yes
+
+    - name: Remove VLANs
+      cisco.nxos.nxos_config:
+        lines:
+          - no vlan 10
+          - no vlan 20
+          - no vlan 3966
+          - no vlan 3967
+      ignore_errors: yes
+
+    - name: Remove EVPN and BGP
+      cisco.nxos.nxos_config:
+        lines:
+          - no evpn
+          - no router ospf 1
+          - no router bgp 65001
+      ignore_errors: yes
+
+    - name: Remove loopbacks
+      cisco.nxos.nxos_config:
+        lines:
+          - no interface loopback0
+          - no interface loopback1
+      ignore_errors: yes
+
+    - name: Reset Ethernet interfaces
+      cisco.nxos.nxos_config:
+        lines:
+          - default interface Ethernet1/1
+          - default interface Ethernet1/2
+          - default interface Ethernet1/3
+          - default interface Ethernet1/4
+          - default interface Ethernet1/5
+          - default interface Ethernet1/6
+      ignore_errors: yes
+
+    - name: Remove features
+      cisco.nxos.nxos_config:
+        lines:
+          - no feature ospf
+          - no feature bgp
+          - no feature nv overlay
+          - no feature vn-segment-vlan-based
+          - no feature interface-vlan
+      ignore_errors: yes
+
+    - name: Save clean configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+    - name: Verify management reachable
+      cisco.nxos.nxos_command:
+        commands:
+          - show interface mgmt0 brief
+      register: mgmt
+
+    - name: Print result
+      debug:
+        msg: "{{ inventory_hostname }} mgmt0: {{ mgmt.stdout[0] }}"
