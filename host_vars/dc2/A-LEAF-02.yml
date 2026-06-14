@@ -1,0 +1,7 @@
+
+# PaloAlto-FW2 connection
+paloalto_local_ip: "172.16.7.6/30"
+paloalto_peer_ip: "172.16.7.5"
+paloalto_vrf: "TENANT-A"
+paloalto_bgp_as: 65502
+paloalto_description: "to-PaloAlto-FW2-eth1/2"

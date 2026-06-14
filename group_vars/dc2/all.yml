@@ -1,0 +1,4 @@
+
+# PaloAlto-FW2 (DC2 inter-tenant firewall)
+paloalto_fw2_mgmt: "192.168.1.62"
+paloalto_bgp_as: 65502

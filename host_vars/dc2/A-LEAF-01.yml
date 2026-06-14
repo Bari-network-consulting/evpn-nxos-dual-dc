@@ -1,0 +1,7 @@
+
+# PaloAlto-FW2 connection (DC2 inter-tenant firewall)
+paloalto_local_ip: "172.16.7.2/30"
+paloalto_peer_ip: "172.16.7.1"
+paloalto_vrf: "TENANT-A"
+paloalto_bgp_as: 65502
+paloalto_description: "to-PaloAlto-FW2-eth1/1"
