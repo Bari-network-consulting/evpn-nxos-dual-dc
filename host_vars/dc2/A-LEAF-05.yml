@@ -1,0 +1,9 @@
+router_id: "10.1.0.15"
+loopback0_ip: "10.1.0.15/32"
+loopback1_ip: "10.1.0.115/32"
+vtep_ip: "10.1.0.115"
+spine01_uplink_ip: "172.16.3.9/31"
+spine02_uplink_ip: "172.16.4.9/31"
+dci_po_ip: "10.255.1.2/30"
+dci_peer_ip: "10.255.1.1"
+dci_peer_as: 65000

@@ -1,0 +1,7 @@
+router_id: "10.1.0.2"
+loopback0_ip: "10.1.0.2/32"
+uplink_to_leaf01: "172.16.4.0/31"
+uplink_to_leaf02: "172.16.4.2/31"
+uplink_to_leaf03: "172.16.4.4/31"
+uplink_to_leaf04: "172.16.4.6/31"
+uplink_to_leaf05: "172.16.4.8/31"

@@ -28,3 +28,10 @@ ansible_connection=network_cli
 ansible_user=admin
 ansible_password=admin123
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o KexAlgorithms=+diffie-hellman-group14-sha1'
+
+[a_leaf_tenant_a_fw]
+A-LEAF-01 ansible_host=192.168.1.41
+A-LEAF-02 ansible_host=192.168.1.42
+
+[a_leaf_tenant_b_fw]
+A-LEAF-03 ansible_host=192.168.1.43

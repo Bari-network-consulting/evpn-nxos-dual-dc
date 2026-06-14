@@ -1,0 +1,83 @@
+---
+# Module 07b - NX-OS Leaf config for Fortinet FW1 (DC1 only)
+# DC2 uses PaloAlto-FW2 - see module07c_paloalto_nxos.yml
+
+- name: "Module 07b-A: DC1 TENANT-A Leafs for Fortinet FW1"
+  hosts: n_leaf_tenant_a_fw
+  gather_facts: no
+  connection: network_cli
+  tasks:
+    - name: Configure E1/8 in TENANT-A VRF
+      cisco.nxos.nxos_config:
+        lines:
+          - "description {{ fortinet_description }}"
+          - no switchport
+          - "vrf member {{ fortinet_vrf }}"
+          - "ip address {{ fortinet_local_ip }}"
+          - no shutdown
+        parents: interface Ethernet1/8
+    - name: Configure BGP neighbor toward Fortinet
+      cisco.nxos.nxos_config:
+        lines:
+          - "remote-as {{ fortinet_bgp_as }}"
+          - description to-Fortinet-FW1
+          - address-family ipv4 unicast
+          - send-community extended
+        parents:
+          - router bgp 65000
+          - "vrf {{ fortinet_vrf }}"
+          - "neighbor {{ fortinet_peer_ip }}"
+    - name: Add static route for TENANT-B via Fortinet
+      cisco.nxos.nxos_config:
+        lines:
+          - "ip route 10.20.20.0/24 {{ fortinet_peer_ip }}"
+        parents:
+          - "vrf context {{ fortinet_vrf }}"
+    - name: Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+- name: "Module 07b-B: DC1 TENANT-B Leafs for Fortinet FW1"
+  hosts: n_leaf_tenant_b_fw
+  gather_facts: no
+  connection: network_cli
+  tasks:
+    - name: Configure E1/8 in TENANT-B VRF
+      cisco.nxos.nxos_config:
+        lines:
+          - "description {{ fortinet_description }}"
+          - no switchport
+          - "vrf member {{ fortinet_vrf }}"
+          - "ip address {{ fortinet_local_ip }}"
+          - no shutdown
+        parents: interface Ethernet1/8
+    - name: Configure BGP neighbor toward Fortinet in TENANT-B VRF
+      cisco.nxos.nxos_config:
+        lines:
+          - "remote-as {{ fortinet_bgp_as }}"
+          - description to-Fortinet-FW1-TENANT-B
+          - address-family ipv4 unicast
+          - allowas-in 1
+          - send-community extended
+          - soft-reconfiguration inbound always
+        parents:
+          - router bgp 65000
+          - "vrf {{ fortinet_vrf }}"
+          - "neighbor {{ fortinet_peer_ip }}"
+    - name: Enable redistribute static in TENANT-B BGP
+      cisco.nxos.nxos_config:
+        lines:
+          - redistribute static route-map PERMIT-ALL
+        parents:
+          - router bgp 65000
+          - "vrf {{ fortinet_vrf }}"
+          - address-family ipv4 unicast
+    - name: Add static route for TENANT-A via Fortinet
+      cisco.nxos.nxos_config:
+        lines:
+          - "ip route 10.10.10.0/24 {{ fortinet_peer_ip }}"
+        parents:
+          - "vrf context {{ fortinet_vrf }}"
+    - name: Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always

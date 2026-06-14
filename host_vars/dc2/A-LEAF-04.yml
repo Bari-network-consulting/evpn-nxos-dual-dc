@@ -1,0 +1,10 @@
+router_id: "10.1.0.14"
+loopback0_ip: "10.1.0.14/32"
+loopback1_ip: "10.1.0.114/32"
+vtep_ip: "10.1.0.114"
+spine01_uplink_ip: "172.16.3.7/31"
+spine02_uplink_ip: "172.16.4.7/31"
+vpc_domain: 20
+vpc_role: secondary
+vpc_peer_keepalive_local: "192.168.1.44"
+vpc_peer_keepalive_peer: "192.168.1.43"

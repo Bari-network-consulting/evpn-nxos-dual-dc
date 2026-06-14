@@ -1,0 +1,86 @@
+---
+# Module 07c - NX-OS Leaf config for PaloAlto-FW2 (DC2 only)
+# Connections:
+#   A-LEAF-01 E1/8 -> PaloAlto eth1/1 (TENANT-A) 172.16.7.2/30
+#   A-LEAF-02 E1/8 -> PaloAlto eth1/2 (TENANT-A) 172.16.7.6/30
+#   A-LEAF-03 E1/8 -> PaloAlto eth1/3 (TENANT-B) 172.16.7.10/30
+
+- name: "Module 07c-A: DC2 TENANT-A Leafs for PaloAlto FW2"
+  hosts: a_leaf_tenant_a_fw
+  gather_facts: no
+  connection: network_cli
+  tasks:
+    - name: Configure E1/8 in TENANT-A VRF
+      cisco.nxos.nxos_config:
+        lines:
+          - "description {{ paloalto_description }}"
+          - no switchport
+          - "vrf member {{ paloalto_vrf }}"
+          - "ip address {{ paloalto_local_ip }}"
+          - no shutdown
+        parents: interface Ethernet1/8
+    - name: Configure BGP neighbor toward PaloAlto in TENANT-A VRF
+      cisco.nxos.nxos_config:
+        lines:
+          - "remote-as {{ paloalto_bgp_as }}"
+          - description to-PaloAlto-FW2
+          - address-family ipv4 unicast
+          - send-community extended
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "vrf {{ paloalto_vrf }}"
+          - "neighbor {{ paloalto_peer_ip }}"
+    - name: Add static route for TENANT-B via PaloAlto
+      cisco.nxos.nxos_config:
+        lines:
+          - "ip route {{ tenant_b_subnet }} {{ paloalto_peer_ip }}"
+        parents:
+          - "vrf context {{ paloalto_vrf }}"
+    - name: Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always
+
+- name: "Module 07c-B: DC2 TENANT-B Leaf for PaloAlto FW2"
+  hosts: a_leaf_tenant_b_fw
+  gather_facts: no
+  connection: network_cli
+  tasks:
+    - name: Configure E1/8 in TENANT-B VRF
+      cisco.nxos.nxos_config:
+        lines:
+          - "description {{ paloalto_description }}"
+          - no switchport
+          - "vrf member {{ paloalto_vrf }}"
+          - "ip address {{ paloalto_local_ip }}"
+          - no shutdown
+        parents: interface Ethernet1/8
+    - name: Configure BGP neighbor toward PaloAlto in TENANT-B VRF
+      cisco.nxos.nxos_config:
+        lines:
+          - "remote-as {{ paloalto_bgp_as }}"
+          - description to-PaloAlto-FW2-TENANT-B
+          - address-family ipv4 unicast
+          - allowas-in 1
+          - send-community extended
+          - soft-reconfiguration inbound always
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "vrf {{ paloalto_vrf }}"
+          - "neighbor {{ paloalto_peer_ip }}"
+    - name: Enable redistribute static in TENANT-B BGP
+      cisco.nxos.nxos_config:
+        lines:
+          - redistribute static route-map PERMIT-ALL
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "vrf {{ paloalto_vrf }}"
+          - address-family ipv4 unicast
+    - name: Add static route for TENANT-A via PaloAlto
+      cisco.nxos.nxos_config:
+        lines:
+          - "ip route {{ tenant_a_subnet }} {{ paloalto_peer_ip }}"
+        parents:
+          - "vrf context {{ paloalto_vrf }}"
+    - name: Save configuration
+      cisco.nxos.nxos_config:
+        save_when: always
